@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Bay Tides — NOAA tide & water-level monitor</title>
+    <link rel="stylesheet" href="bay-tides.css">
+  </head>
+  <body>
+    <noscript
+      >This dashboard requires JavaScript to fetch NOAA data and display the
+      interactive chart.</noscript
+    >
+    <main>
+      <header>
+        <div class="brand">
+          <div class="logo" aria-hidden="true">
+            <svg width="31" height="27" viewBox="0 0 31 27" fill="none">
+              <path
+                d="M1 10c5-11 10 11 15 0S26-1 30 10M1 18c5-11 10 11 15 0s10-11 14 0"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+          <div>
+            <div class="eyebrow">San Francisco Bay · NOAA CO-OPS</div>
+            <h1>Bay Tides</h1>
+            <p>Two tide predictions. Two measured departures.</p>
+          </div>
+        </div>
+        <div class="header-right">
+          <span class="badge"><span class="dot"></span>Direct from NOAA</span>
+          <p style="font-size: 11px; margin-top: 7px">
+            No account or API key required
+          </p>
+        </div>
+      </header>
+      <section class="panel" aria-label="Date range and data controls">
+        <div class="controls">
+          <div class="field">
+            <label for="start">Start date · PST</label
+            ><input id="start" type="date" required />
+          </div>
+          <div class="field">
+            <label for="end">End date · PST</label
+            ><input id="end" type="date" required />
+          </div>
+          <button id="apply" class="primary">Load range</button>
+          <div class="spacer"></div>
+          <div class="presets" aria-label="Quick date ranges">
+            <button data-days="1">Today</button
+            ><button data-days="3">3 days</button
+            ><button data-days="7" class="active">7 days</button
+            ><button data-days="31">31 days</button>
+          </div>
+          <button
+            id="refresh"
+            title="Fetch the loaded date range again from NOAA"
+          >
+            ↻ Refresh data
+          </button>
+        </div>
+        <div class="subcontrols">
+          <span class="status">Feet · PST (UTC−8 year-round)</span>
+          <div class="spacer"></div>
+          <span id="status" class="status" role="status" aria-live="polite"
+            >Ready to load</span
+          >
+        </div>
+        <div id="notice" class="notice" role="alert"></div>
+      </section>
+      <div class="cards">
+        <section class="card">
+          <div class="card-top">
+            <i class="swatch" style="background: var(--orange)"></i>Redwood City
+            · latest Δ
+          </div>
+          <div class="value" id="redwood-value">—</div>
+          <p id="redwood-time">Waiting for observations</p>
+        </section>
+        <section class="card">
+          <div class="card-top">
+            <i class="swatch" style="background: var(--purple)"></i>San
+            Francisco · latest Δ
+          </div>
+          <div class="value" id="sf-value">—</div>
+          <p id="sf-time">Waiting for observations</p>
+        </section>
+      </div>
+      <section class="panel" aria-label="Interactive tide charts">
+        <div class="chart-head">
+          <div>
+            <h2>Tides & departures</h2>
+            <div id="visible-range">
+              Shared timeline · heights relative to station MLLW
+            </div>
+          </div>
+          <div class="tools">
+            <button id="left" aria-label="Pan timeline left">←</button
+            ><button id="zoom-in" aria-label="Zoom in">＋</button
+            ><button id="zoom-out" aria-label="Zoom out">−</button
+            ><button id="right" aria-label="Pan timeline right">→</button
+            ><button id="reset">Reset view</button
+            ><select id="mode" aria-label="Chart drag mode">
+              <option value="pan">Drag to pan</option>
+              <option value="box">Drag to zoom</option></select
+            ><button id="csv">↓ CSV</button>
+          </div>
+        </div>
+        <div class="legend">
+          <label
+            ><input type="checkbox" data-series="palo" checked /><i
+              class="swatch"
+              style="background: var(--teal)"
+            ></i
+            >Palo Alto prediction*</label
+          ><label
+            ><input type="checkbox" data-series="coyote" checked /><i
+              class="swatch"
+              style="background: var(--blue)"
+            ></i
+            >Coyote Creek prediction</label
+          ><label
+            ><input type="checkbox" data-series="redwood" checked /><i
+              class="swatch"
+              style="background: var(--orange)"
+            ></i
+            >Redwood City Δ</label
+          ><label
+            ><input type="checkbox" data-series="sf" checked /><i
+              class="swatch"
+              style="background: var(--purple)"
+            ></i
+            >San Francisco Δ</label
+          ><button
+            class="info-button"
+            id="impacts-button"
+            popovertarget="impacts-popup"
+            aria-haspopup="dialog"
+          >
+            Impacts
+          </button>
+        </div>
+        <div class="chart-wrap">
+          <div
+            id="chart"
+            role="img"
+            aria-label="Three synchronized interactive charts: Palo Alto predictions with 9–10 foot threshold band; Coyote Creek predictions with 10–11 foot threshold band; Redwood City and San Francisco observed minus predicted below."
+          ></div>
+          <button
+            class="info-button conversion-button palo"
+            id="palo-conversion-button"
+            popovertarget="palo-conversion-popup"
+            aria-haspopup="dialog"
+            aria-label="Palo Alto datum conversion"
+          >
+            <span class="conversion-icon" aria-hidden="true">⇄</span>
+            Conversion</button
+          ><button
+            class="info-button conversion-button coyote"
+            id="coyote-conversion-button"
+            popovertarget="coyote-conversion-popup"
+            aria-haspopup="dialog"
+            aria-label="Coyote Creek datum conversion"
+          >
+            <span class="conversion-icon" aria-hidden="true">⇄</span> Conversion
+          </button>
+          <div id="empty" class="empty-overlay">Loading NOAA data…</div>
+        </div>
+        <div class="chart-caption">
+          <span
+            >Scroll / pinch to zoom · drag to pan · use the bottom navigator to
+            select a window</span
+          ><span
+            >*Palo Alto curve is approximate; dots are NOAA high/low
+            predictions.</span
+          >
+        </div>
+      </section>
+      <section class="panel">
+        <details>
+          <summary>Data sources & how to read this chart</summary>
+          <div class="details-grid">
+            <div id="datasets"></div>
+            <div class="method">
+              <p>
+                <strong>Separate tide panels:</strong> Palo Alto Yacht Harbor
+                (9414525) and Coyote Creek (9414575) predicted tides, relative
+                to each station’s Mean Lower Low Water (MLLW). Local datums are
+                not a common absolute elevation reference.
+              </p>
+              <p>
+                <strong>Lower panel:</strong> Δ = observed − predicted at
+                Redwood City (9414523) and San Francisco (9414290), calculated
+                only where NOAA supplies both values at the exact same UTC
+                timestamp. Positive means higher than predicted. The panels have
+                separate vertical scales.
+              </p>
+              <p>
+                <strong>Thresholds:</strong> The light yellow background marks
+                9–10 ft at Palo Alto and 10–11 ft at Coyote Creek. Orange
+                extends from the upper threshold to the top of each plot,
+                representing all higher levels. Threshold heights are in feet
+                above each station’s MLLW.
+              </p>
+              <p>
+                <strong>Palo Alto:</strong> NOAA supplies high/low predictions
+                only. The curve uses a half-cosine interpolation between those
+                points, for orientation; intermediate heights are not NOAA
+                predictions.
+              </p>
+              <p>
+                <strong>Coverage:</strong> Up to 31 PST calendar days per load.
+                Observations end at the present; missing samples and future
+                deltas stay blank. Recent observations may be preliminary and
+                can change. Tooltips and CSV include NOAA quality information.
+              </p>
+              <p>
+                The page loads Apache ECharts (Apache 2.0) from jsDelivr and
+                retrieves tide data directly from NOAA.
+                <a
+                  href="https://api.tidesandcurrents.noaa.gov/api/prod/"
+                  target="_blank"
+                  rel="noopener"
+                  >NOAA API documentation ↗</a
+                >
+                ·
+                <a
+                  href="https://www.apache.org/licenses/LICENSE-2.0"
+                  target="_blank"
+                  rel="noopener"
+                  >Chart license ↗</a
+                >
+              </p>
+            </div>
+          </div>
+        </details>
+      </section>
+      <footer>
+        <span
+          >NOAA CO-OPS data · Retrieved directly by your browser · All dates and
+          times use PST (UTC−8 year-round)</span
+        ><span>Refresh reloads the last applied range.</span>
+      </footer>
+    </main>
+    <div
+      id="palo-conversion-popup"
+      class="info-popover"
+      popover
+      role="dialog"
+      aria-labelledby="palo-conversion-title"
+    >
+      <button
+        class="popover-close"
+        popovertarget="palo-conversion-popup"
+        popovertargetaction="hide"
+        aria-label="Close Palo Alto conversion"
+      >
+        ×
+      </button>
+      <h3 id="palo-conversion-title">Palo Alto · MLLW → NAVD88</h3>
+      <p>
+        NAVD88 heights are approximately <strong>1–1.5 ft lower</strong> than
+        the local MLLW heights shown on this chart.
+      </p>
+      <p class="formula">NAVD88 ≈ chart height − 1 to 1.5 ft</p>
+      <p>
+        For example, 10 ft MLLW is approximately
+        <strong>8.5–9 ft NAVD88</strong>.
+      </p>
+      <p class="small-note">
+        Approximate conversion. The chart and its threshold bands remain in
+        local MLLW.
+      </p>
+    </div>
+    <div
+      id="coyote-conversion-popup"
+      class="info-popover"
+      popover
+      role="dialog"
+      aria-labelledby="coyote-conversion-title"
+    >
+      <button
+        class="popover-close"
+        popovertarget="coyote-conversion-popup"
+        popovertargetaction="hide"
+        aria-label="Close Coyote Creek conversion"
+      >
+        ×
+      </button>
+      <h3 id="coyote-conversion-title">Coyote Creek · MLLW → NAVD88</h3>
+      <p>
+        NAVD88 heights are approximately <strong>2 ft lower</strong> than the
+        local MLLW heights shown on this chart.
+      </p>
+      <p class="formula">NAVD88 ≈ chart height − 2 ft</p>
+      <p>
+        For example, 11 ft MLLW is approximately <strong>9 ft NAVD88</strong>.
+      </p>
+      <p class="small-note">
+        Approximate conversion. The chart and its threshold bands remain in
+        local MLLW.
+      </p>
+    </div>
+    <div
+      id="impacts-popup"
+      class="info-popover"
+      popover
+      role="dialog"
+      aria-labelledby="impacts-title"
+    >
+      <button
+        class="popover-close"
+        popovertarget="impacts-popup"
+        popovertargetaction="hide"
+        aria-label="Close impacts"
+      >
+        ×
+      </button>
+      <h3 id="impacts-title">Flood impacts · NAVD88</h3>
+      <h4>Alviso</h4>
+      <ul>
+        <li>
+          At about <strong>13 ft NAVD88</strong>, flooding may occur. Equates
+          roughly to a 100-year coastal flood event + 2 ft SLR.
+        </li>
+      </ul>
+      <h4>Palo Alto</h4>
+      <p>
+        <strong>At 10.8 ft NAVD88</strong> (roughly, a king tide + 2 ft SLR):
+      </p>
+      <ul>
+        <li>Airfield: 2 ft depth flooding; some buildings flooded.</li>
+      </ul>
+      <p>
+        <strong>At 11.9 ft NAVD88</strong> (roughly, a 10-year coastal flood
+        event with 2 ft SLR):
+      </p>
+      <ul>
+        <li>Airfield floods to a significant depth of 5–8 ft.</li>
+        <li>
+          Most buildings north of 101 have a depth of about 1–2 ft. These appear
+          to be office buildings, not residences.
+        </li>
+      </ul>
+      <p>
+        <strong>At 13.02 ft NAVD88</strong> (about a 100-year coastal flood
+        event with 2 ft SLR):
+      </p>
+      <ul>
+        <li>Airfield: about 10 ft depth of water.</li>
+        <li>
+          Most buildings north of 101 would flood to a depth of up to 5 ft.
+        </li>
+        <li>
+          Flooding starts to spread south of 101, with some residences flooding.
+        </li>
+      </ul>
+      <p class="small-note">
+        SLR = sea level rise. All impact elevations above use NAVD88; the tide
+        charts use local MLLW.
+      </p>
+    </div>
+    <script
+      src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"
+      integrity="sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss"
+      crossorigin="anonymous"
+    ></script>
+
+    <script src="bay-tides.js"></script>
+  </body>
+</html>
